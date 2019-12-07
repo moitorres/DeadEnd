@@ -1,7 +1,7 @@
 /*
     Client program for the game "Dead End"
 
-    Student: Moises Uriel Torres A01021323
+    Moises Uriel Torres A01021323
 */
 
 #include <stdio.h>
@@ -26,6 +26,7 @@
 ///// FUNCTION DECLARATIONS
 void usage(char * program);
 void startGame(int connection_fd);
+void createMaze(Node nodeList[], sf::RenderWindow &window);
 void mergeGroup(Node nodeList[], int group1, int group2);
 
 ///// MAIN FUNCTION
@@ -71,12 +72,80 @@ void startGame(int connection_fd)
     char buffer[BUFFER_SIZE];
     int status;
 
+    //A list for the nodes in the maze is created, according to the width and height defined
+    Node nodeList[GRID_WIDTH * GRID_HEIGHT];
+
+    //The window for the game is created
+    sf::RenderWindow window(sf::VideoMode(GRID_WIDTH * NODE_SIZE, GRID_HEIGHT * NODE_SIZE), "Dead End");
+
+    //The player is created
+    sf::RectangleShape player(sf::Vector2f(15.0f, 15.0f));
+    player.setPosition(10.0f,10.0f);
+    player.setFillColor(sf::Color::Red);
+
+    //The maze is created
+    createMaze(nodeList, window);
+
+    //Send message to the server
+    sprintf(buffer,"The game is about to begin\n");
+    sendString(connection_fd, buffer, BUFFER_SIZE);
+
+    //While the window is opened
+    while(window.isOpen())
+    {
+        //Poll event for the window
+        sf::Event event;
+        while(window.pollEvent(event))
+        {
+            //If the user clicks the close button, the windows closes
+            if (event.type == sf::Event::Closed)
+                window.close();
+        }
+
+        //Movement of the player
+        //If the player moves left
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
+        {
+            player.move(-1.3f, 0.0f);
+        }
+        //If the player moves right
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+        {
+            player.move(1.3f, 0.0f);
+        }
+        //If the player moves up
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
+        {
+            player.move(0.0f, -1.3f);
+        }
+        //If the player moves down
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
+        {
+            player.move(0.0f, 1.3f);
+        }
+
+        //The windows clears itself with a black background
+        window.clear(sf::Color::Black);
+
+        //Draw the maze 
+        drawMaze(window, nodeList);
+
+        //Draw the player
+        window.draw(player);
+
+        // Display the new buffer
+        window.display();
+    }
+
+}
+
+//Function that creates a maze using the kruskall algorithm 
+void createMaze(Node nodeList[], sf::RenderWindow &window)
+{
     //The random is seeded
     srand(time(NULL));
     
-    //The maze is generated using the kruskall algorithm
-    //A list for the nodes in the maze is created, according to the width and height defined
-    Node nodeList[GRID_WIDTH * GRID_HEIGHT];
+    //The groups of the nodes are initialized
     for (int i = 0; i < GRID_WIDTH * GRID_HEIGHT; ++i)
         nodeList[i].group = i;
 
@@ -110,47 +179,22 @@ void startGame(int connection_fd)
                 }
             }
         }
-
-    //The window for the game is created
-    sf::RenderWindow window(sf::VideoMode(GRID_WIDTH * NODE_SIZE, GRID_HEIGHT * NODE_SIZE), "Dead End");
-    while(window.isOpen())
+    
+    //If the vector of walls isn't empty, create that wall and then erase it from the vector
+    while (!wallVec.empty())
     {
-        //Poll event for the window
-        sf::Event event;
-        while(window.pollEvent(event))
+        int rndWall = rand() % wallVec.size();
+        Wall* wall = &(wallVec.at(rndWall));
+        Node* node1 = wall->node1;
+        Node* node2 = wall->node2;
+        if (node1->group != node2->group)
         {
-            //If the user clicks the close button, the windows closes
-            if (event.type == sf::Event::Closed)
-                window.close();
+            joinNodes(nodeList, node1, node2);
+            mergeGroup(nodeList, node1->group, node2->group);
         }
 
-        //The windows clears itself with a black background
-        window.clear(sf::Color::Black);
-        
-        //If the vector of walls isn't empty, create that wall and then erase it from the vector
-        if (!wallVec.empty())
-        {
-            int rndWall = rand() % wallVec.size();
-            Wall* wall = &(wallVec.at(rndWall));
-            Node* node1 = wall->node1;
-            Node* node2 = wall->node2;
-            if (node1->group != node2->group)
-            {
-                joinNodes(nodeList, node1, node2);
-                mergeGroup(nodeList, node1->group, node2->group);
-            }
-
-            wallVec.erase(wallVec.begin() + rndWall);
-        }
-
-        //Draw the maze with the new wall
-        drawMaze(window, nodeList);
-
-        // sf::sleep(sf::milliseconds(100));
-        window.display();
-        
+        wallVec.erase(wallVec.begin() + rndWall);
     }
-
 }
 
 //Function for merging two groups of nodes

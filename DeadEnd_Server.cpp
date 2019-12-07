@@ -1,7 +1,7 @@
 /*
     Server program for the game "Dead End"
 
-    Student: Moises Uriel Torres A01021323
+    Moises Uriel Torres A01021323
 */
 
 #include <stdio.h>
@@ -124,6 +124,9 @@ void waitForConnections(int server_fd)
             inet_ntop(client_address.sin_family, &client_address.sin_addr, client_presentation, sizeof client_presentation);
             printf("Received incomming connection from %s on port %d\n", client_presentation, client_address.sin_port);
 
+            //The data for the thread is saved into the structure
+            connection_data->connection_fd = client_fd;
+
             // CREATE A THREAD
             pthread_create(&new_tid, NULL, attentionThread, connection_data);
         }
@@ -143,6 +146,24 @@ void waitForConnections(int server_fd)
 */
 void * attentionThread(void * arg)
 {
+    char buffer[BUFFER_SIZE];
+
+    //The thread data structure is extracted from the parameters
+    thread_data_t * connection_data = (thread_data_t *) arg;
+
+    //The connection_fd is saved
+    int connection_fd = connection_data->connection_fd;
+
+    //The information of the client is saved
+    struct sockaddr_in client_address;
+    socklen_t client_address_size;
+    char client_presentation[INET_ADDRSTRLEN];    
+
+    inet_ntop(client_address.sin_family, &client_address.sin_addr, client_presentation, sizeof client_presentation);
+
+    //The server waits for the message that the client is about to begin the game
+    recvString(connection_fd, buffer, BUFFER_SIZE);
+    printf("The client %s is about to begin the game\n",client_presentation);
 
     //The thread exits
     pthread_exit(NULL);
