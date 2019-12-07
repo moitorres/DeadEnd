@@ -1,2 +1,2 @@
 # DeadEnd
-Game in which you must escape a maze. Created using c++ and sfml.
+Dead End is a game in which you must escape from a maze. The code is written in c++ using sfml.
