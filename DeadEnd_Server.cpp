@@ -38,6 +38,8 @@ int interrupt_exit = 0;
 
 
 ///// FUNCTION DECLARATIONS
+void setupHandlers();
+void onInterrupt(int signal);
 void usage(char * program);
 void waitForConnections(int server_fd);
 void * attentionThread(void * arg);
@@ -82,6 +84,30 @@ void usage(char * program)
     printf("\t%s {port_number}\n", program);
     exit(EXIT_FAILURE);
 }
+
+// Handler for SIGINT
+void onInterrupt(int signal)
+{
+    interrupt_exit = 1;
+}
+
+// Define signal handlers
+void setupHandlers()
+{
+    //Create list for blocked signals
+    sigset_t new_set;
+    //The set is filled with all possible signals
+    sigfillset(&new_set);
+    //All save signal 2; i.e. Ctrl-C
+    sigdelset(&new_set,2);
+    //The new set blocks all other signals
+    sigprocmask(SIG_SETMASK, &new_set, NULL);
+
+    struct sigaction new_action;
+    new_action.sa_handler = onInterrupt;
+    sigaction(SIGINT, &new_action, NULL);
+}
+
 
 /*
     Main loop to wait for incomming connections
