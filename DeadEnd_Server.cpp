@@ -13,7 +13,7 @@
 #include <time.h>
 // Signals library
 #include <errno.h>
-#include <signal.h>
+#include <sys/signal.h>
 // Sockets libraries
 #include <netdb.h>
 #include <sys/poll.h>
