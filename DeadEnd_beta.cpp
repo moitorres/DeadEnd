@@ -65,7 +65,7 @@ void startGame()
     while(window.isOpen())
     {
         //Initiate pointer to node list
-        Node* node = nodeList;
+        //Node* node = nodeList;
         int col, row = 0;
         //Poll event for the window
         sf::Event event;
@@ -80,45 +80,38 @@ void startGame()
         //If the player moves left
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
         {
-            if(!node->walls[SIDE_LEFT]){
-                player.move(-1.3f, 0.0f);
-                col--;
-                node = nodeList - col + row;
-            }else{
-                printf("can't move left");
+            
+            if(!nodeList[col + row].walls[SIDE_LEFT]){
+                //player.move(-1.3f, 0.0f);
+                col = nextCol(col, SIDE_LEFT)/40;
+                printf("there is no left wall");
             }
         }
         //If the player moves right
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
         {
-            if(!node->walls[SIDE_RIGHT]){
-                player.move(1.3f, 0.0f);
-                col++;
-                node = nodeList + col + row;
-            }else{
-                printf("can't move right");
+            if(!nodeList[col + row].walls[SIDE_RIGHT]){
+                //player.move(1.3f, 0.0f);
+                col = nextCol(col, SIDE_RIGHT)/40;
+                printf("there is no right wall");
             }
         }
         //If the player moves up
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
         {
-            if(!node->walls[SIDE_TOP]){
-                player.move(0.0f, -1.3f);
-                row--;
-                node = nodeList + col - row;
-            }else{
-                printf("can't move up");
+            if(!nodeList[col + row].walls[SIDE_TOP]){
+                //player.move(0.0f, -1.3f);
+                row = nextCol(row, SIDE_TOP)/40;
+                printf("there is no upper wall");
             }
         }
         //If the player moves down
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
         {
-            if(!node->walls[SIDE_DOWN]){
-                player.move(0.0, 1.3f);
-                row++;
-                node = nodeList + col + row;
-            }else{
-                printf("can't move down");
+            if(!nodeList[row].walls[SIDE_DOWN]){
+                //player.move(0.0, 1.3f);
+                row = nextCol(row, SIDE_DOWN)/40;
+                printf("ther is no down wall");
             }
         }
 
