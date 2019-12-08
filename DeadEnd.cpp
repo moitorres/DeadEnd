@@ -2,24 +2,33 @@
     Client program for the game "Dead End"
 
     Moises Uriel Torres A01021323
+    Daniel Atilano A01020270
 */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 #include <string.h>
 #include <iostream>
 #include <unistd.h>
 #include <vector>
 #include <time.h>
+// Signals library
+#include <errno.h>
+#include <signal.h>
 //SFML libraries
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 // Sockets libraries
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <sys/poll.h>
 // Custom libraries
 #include "sockets.h"
 #include "fatal_error.h"
 #include "mazeHelper.h"
+
+using namespace std;
 
 #define BUFFER_SIZE 1024
 
@@ -27,6 +36,8 @@
 void usage(char * program);
 void startGame(int connection_fd);
 void createMaze(Node nodeList[], sf::RenderWindow &window);
+void deathScreen(sf::RenderWindow &window);
+bool playerMoves();
 void mergeGroup(Node nodeList[], int group1, int group2);
 
 ///// MAIN FUNCTION
@@ -71,6 +82,25 @@ void startGame(int connection_fd)
 {
     char buffer[BUFFER_SIZE];
     int status;
+    //Counter and limit for the sound queues
+    int counter, limit=3;
+    int poll_response;
+
+    //A sound buffer is created
+    sf::SoundBuffer footsteps;
+    //A file is loaded into the buffer
+    if(!footsteps.loadFromFile("./sounds/Airhorn.wav"))
+    {
+        printf("Error: loading sound\n");
+    }
+    //A sound is created
+    sf::Sound sound;
+    sound.setBuffer(footsteps);
+
+    //Create a structure to hold the file descriptors to poll
+    struct pollfd test_fds[1];
+    test_fds[0].fd = connection_fd;
+    test_fds[0].events = POLLIN;
 
     //A list for the nodes in the maze is created, according to the width and height defined
     Node nodeList[GRID_WIDTH * GRID_HEIGHT];
@@ -90,6 +120,8 @@ void startGame(int connection_fd)
     sprintf(buffer,"The game is about to begin\n");
     sendString(connection_fd, buffer, BUFFER_SIZE);
 
+    bzero(buffer, BUFFER_SIZE);
+
     //While the window is opened
     while(window.isOpen())
     {
@@ -102,29 +134,70 @@ void startGame(int connection_fd)
                 window.close();
         }
 
-        //Movement of the player
-        //If the player moves left
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
+        //Check if the server send a message
+        poll_response = poll(test_fds,1,0);
+        //If the server send a message, it means the client must play a sound
+        if (poll_response == 1)
         {
-            player.move(-1.3f, 0.0f);
+            //Receive the sound to play
+            recvString(connection_fd,buffer,BUFFER_SIZE);
+            
+
+            //IF the code is 1, the sound is played
+            if (strncmp(buffer,"1", BUFFER_SIZE)==0)
+            {
+                sound.play();
+            }
+            
         }
-        //If the player moves right
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+        //If there is a connection error
+        else if(poll_response == -1)
         {
-            player.move(1.3f, 0.0f);
-        }
-        //If the player moves up
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
-        {
-            player.move(0.0f, -1.3f);
-        }
-        //If the player moves down
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
-        {
-            player.move(0.0f, 1.3f);
+            printf("\nServer exit\n");
         }
 
-        //The windows clears itself with a black background
+        bzero(buffer, BUFFER_SIZE);
+
+        //Movement of the player
+
+        //If the player moves while the sound is playing, they die
+        if(sound.getStatus() == sf::SoundSource::Status::Playing){
+            if(playerMoves())
+            {
+                //The program tells the server the user died
+                sprintf(buffer,"-1");
+                sendString(connection_fd, buffer, BUFFER_SIZE);
+                //The death screen is shown
+                deathScreen(window);
+                //The cycle breaks
+                break;
+            }
+        }
+        //If the sound isn't playing, they can move freely
+        else{
+            //If the player moves left
+            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
+            {
+                player.move(-1.3f, 0.0f);
+            }
+            //If the player moves right
+            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+            {
+                player.move(1.3f, 0.0f);
+            }
+            //If the player moves up
+            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
+            {
+                player.move(0.0f, -1.3f);
+            }
+            //If the player moves down
+            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
+            {
+                player.move(0.0f, 1.3f);
+            }
+        }
+
+        //The window clears itself with a black background
         window.clear(sf::Color::Black);
 
         //Draw the maze 
@@ -195,6 +268,53 @@ void createMaze(Node nodeList[], sf::RenderWindow &window)
 
         wallVec.erase(wallVec.begin() + rndWall);
     }
+}
+
+//Function for printing the death screen
+void deathScreen(sf::RenderWindow &window)
+{
+    //The font for the deathscreen is loaded
+    sf::Font font;
+    if (!font.loadFromFile("./fonts/8bitOperatorPlus8-Regular.ttf"))
+    {
+        printf("Error: loading font\n");
+    }
+
+    //A text is created and the font is applied to it
+    sf::Text text;
+    text.setFont(font);
+
+    //the string "game over" is added to the text
+    text.setString("Game Over");
+
+    //The size of the text is set
+    text.setCharacterSize(200);
+
+    // set the color
+    text.setFillColor(sf::Color::Red);
+
+    //The text is printed for fifty cycles and then, the game finishes
+    for(int i=0;i<500;i++)
+    {
+        window.clear(sf::Color::Black);
+        window.draw(text);
+        window.display();
+    }
+}
+
+bool playerMoves(){
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)
+        || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)
+        || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)
+        || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
+        {
+            return true;
+        }
+    else
+    {
+        return false;
+    }
+    
 }
 
 //Function for merging two groups of nodes

@@ -18,7 +18,7 @@ CC = g++
 #  http://stackoverflow.com/questions/12024703/why-cant-getaddrinfo-be-found-when-compiling-with-gcc-and-std-c99
 CFLAGS = -Wall -g -std=gnu99 -pedantic # -O2
 # Options to use for the final linking process
-LDLIBS = fatal_error.cpp sockets.cpp mazeHelper.cpp -lpthread -lsfml-graphics -lsfml-window -lsfml-system
+LDLIBS = fatal_error.cpp sockets.cpp mazeHelper.cpp -lpthread -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
 ### The rules ###
 # These should work for most projects without change
