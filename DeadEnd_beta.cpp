@@ -82,8 +82,8 @@ void startGame()
         {
             
             if(!nodeList[col + row].walls[SIDE_LEFT]){
-                //player.move(-1.3f, 0.0f);
-                col = nextCol(col, SIDE_LEFT)/40;
+                player.move(-1.3f, 0.0f);
+                col -= col/40;
                 printf("there is no left wall");
             }
         }
@@ -91,8 +91,7 @@ void startGame()
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
         {
             if(!nodeList[col + row].walls[SIDE_RIGHT]){
-                //player.move(1.3f, 0.0f);
-                col = nextCol(col, SIDE_RIGHT)/40;
+                col += col/40;
                 printf("there is no right wall");
             }
         }
@@ -100,8 +99,8 @@ void startGame()
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
         {
             if(!nodeList[col + row].walls[SIDE_TOP]){
-                //player.move(0.0f, -1.3f);
-                row = nextCol(row, SIDE_TOP)/40;
+                player.move(0.0f, -1.3f);
+                row -= row/40;
                 printf("there is no upper wall");
             }
         }
@@ -109,8 +108,8 @@ void startGame()
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
         {
             if(!nodeList[row].walls[SIDE_DOWN]){
-                //player.move(0.0, 1.3f);
-                row = nextCol(row, SIDE_DOWN)/40;
+                player.move(0.0, 1.3f);
+                row += row/40;
                 printf("ther is no down wall");
             }
         }
