@@ -62,6 +62,8 @@ int main(int argc, char * argv[])
         usage(argv[0]);
     }
 
+    //Setup the signal handlers
+    setupHandlers();
 	// Show the IPs assigned to this computer
 	printLocalIPs();
     // Start the server
@@ -255,6 +257,7 @@ void * attentionThread(void * arg)
     }
 
     bzero(buffer, BUFFER_SIZE);
+
     //The server tells the client it is about to disconnect
     if(interrupt_exit){
         printf("Telling the clients the server is closing down\n");

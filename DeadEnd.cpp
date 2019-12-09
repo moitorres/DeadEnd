@@ -37,7 +37,7 @@ void usage(char * program);
 void onInterrupt(int signal);
 void setupHandlers();
 void startGame(int connection_fd);
-void startSCreen(sf::RenderWindow &window);
+void startScreen(sf::RenderWindow &window);
 void deathScreen(sf::RenderWindow &window);
 void victoryScreen(sf::RenderWindow &window);
 bool collides(sf::Sprite sprite, sf::CircleShape circle);
@@ -177,7 +177,7 @@ void startGame(int connection_fd)
     key.setPosition(generateRandomPosition(window));
 
     //The start screen is printed
-    startSCreen(window);
+    startScreen(window);
 
     //Send message to the server
     sprintf(buffer,"The game is about to begin\n");
@@ -230,12 +230,15 @@ void startGame(int connection_fd)
             //The boolean becomes false
             soundPlaying = false;
         }
-
-        //The program checks for how much time the sound has been playing
-        timeElapsed = (clock()-timeStart)/(double)(CLOCKS_PER_SEC);
+        //If the sound is still playing
+        else if(soundPlaying)
+        {
+            //The program checks for how much time the sound has been playing
+            timeElapsed = (clock()-timeStart)/(double)(CLOCKS_PER_SEC);
+        }
 
         //If the player moves while the sound is playing, they die
-        if(soundPlaying && timeElapsed>1 && timeElapsed<5){
+        if(soundPlaying && timeElapsed>0.5){
             if(playerMoves())
             {
                 //The program tells the server the user died
@@ -321,7 +324,7 @@ void startGame(int connection_fd)
 }
 
 //Function for printing the start screen
-void startSCreen(sf::RenderWindow &window)
+void startScreen(sf::RenderWindow &window)
 {
     //Poll event for the window
     sf::Event event;
