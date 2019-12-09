@@ -34,12 +34,17 @@ using namespace std;
 
 ///// FUNCTION DECLARATIONS
 void usage(char * program);
+void onInterrupt(int signal);
+void setupHandlers();
 void startGame(int connection_fd);
 void deathScreen(sf::RenderWindow &window);
 void victoryScreen(sf::RenderWindow &window);
+sf::Vector2f generateRandomPosition(sf::RenderWindow &window);
 bool playerMoves();
 /*void createMaze(Node nodeList[], sf::RenderWindow &window);
 void mergeGroup(Node nodeList[], int group1, int group2);*/
+
+int interrupt_exit=0;
 
 ///// MAIN FUNCTION
 int main(int argc, char * argv[])
@@ -54,6 +59,8 @@ int main(int argc, char * argv[])
         usage(argv[0]);
     }
 
+    //Setup the signal handlers
+    setupHandlers();
     // Start the server
     connection_fd = connectSocket(argv[1], argv[2]);
 	// Start the game
@@ -76,6 +83,29 @@ void usage(char * program)
     exit(EXIT_FAILURE);
 }
 
+// Handler for SIGINT
+void onInterrupt(int signal)
+{
+    interrupt_exit = 1;
+}
+
+// Define signal handlers
+void setupHandlers()
+{
+    //Create list for blocked signals
+    sigset_t new_set;
+    //The set is filled with all possible signals
+    sigfillset(&new_set);
+    //All save signal 2; i.e. Ctrl-C
+    sigdelset(&new_set,2);
+    //The new set blocks all other signals
+    sigprocmask(SIG_SETMASK, &new_set, NULL);
+
+    struct sigaction new_action;
+    new_action.sa_handler = onInterrupt;
+    sigaction(SIGINT, &new_action, NULL);
+}
+
 /*
     Function that runs the game 
 */
@@ -92,15 +122,15 @@ void startGame(int connection_fd)
     bool soundPlaying = false;
 
     //A sound buffer is created
-    sf::SoundBuffer footsteps;
+    sf::SoundBuffer breathing;
     //A file is loaded into the buffer
-    if(!footsteps.loadFromFile("./sounds/Airhorn.wav"))
+    if(!breathing.loadFromFile("./sounds/breathing.wav"))
     {
         printf("Error: loading sound\n");
     }
-    //A sound is created
+    //A sound is created and the buffer is loaded into it
     sf::Sound sound;
-    sound.setBuffer(footsteps);
+    sound.setBuffer(breathing);
 
     //Create a structure to hold the file descriptors to poll
     struct pollfd test_fds[1];
@@ -116,9 +146,25 @@ void startGame(int connection_fd)
     player.setFillColor(sf::Color(204,170,165,255));
 
     //The light that sorrounds the player is created
-    sf::CircleShape light(60.0f);
-    light.setPosition(player.getPosition().x - 40.0f, player.getPosition().y - 40.0f);
+    sf::CircleShape light(100.0f);
+    light.setPosition(player.getPosition().x - 80.0f, player.getPosition().y - 80.0f);
     light.setFillColor(sf::Color(255,221,0,40));
+
+    //The item to win the game is generated
+    //First, the texture is loaded
+    sf::Texture texture;
+    if (!texture.loadFromFile("./images/key.png"))
+    {
+        printf("Error: loading texture\n");
+    }
+    texture.setSmooth(true);
+    //Then the sprite is created and the texture is applied to it
+    sf::Sprite key;
+    key.setTexture(texture);
+    //And it is scaled down
+    key.setScale(sf::Vector2f(0.3f, 0.3f));
+    //A random position for it is generated
+    key.setPosition(generateRandomPosition(window));
 
     //Send message to the server
     sprintf(buffer,"The game is about to begin\n");
@@ -127,7 +173,7 @@ void startGame(int connection_fd)
     bzero(buffer, BUFFER_SIZE);
 
     //While the window is opened
-    while(window.isOpen())
+    while(window.isOpen() && !interrupt_exit)
     {
         //Poll event for the window
         sf::Event event;
@@ -140,11 +186,9 @@ void startGame(int connection_fd)
 
         //Check if the server send a message
         poll_response = poll(test_fds,1,0);
-        //If the server send a message, it means the client must play a sound
         if (poll_response == 1)
         {
-            printf("Message recived from the server\n");
-            //Receive the sound to play
+            //Receive the message
             recvString(connection_fd,buffer,BUFFER_SIZE);
             
             //IF the code is 1, the sound is played
@@ -156,13 +200,13 @@ void startGame(int connection_fd)
                 soundPlaying = true;
                 sound.play();
             }
-            
-        }
-        //If there is a connection error
-        else if(poll_response == -1)
-        {
-            printf("\nServer exit\n");
-            break;
+
+            //IF the code is -1, it means the server is about to disconnect
+            if (strncmp(buffer,"-1", BUFFER_SIZE)==0)
+            {
+                printf("\nServer disconnected\n");
+                break;
+            } 
         }
 
         bzero(buffer, BUFFER_SIZE);
@@ -185,10 +229,12 @@ void startGame(int connection_fd)
             if(playerMoves())
             {
                 //The program tells the server the user died
-                sprintf(buffer,"-1");
+                sprintf(buffer,"0");
                 sendString(connection_fd, buffer, BUFFER_SIZE);
                 //The death screen is shown
                 deathScreen(window);
+                //The window closes
+                window.close();
                 //The cycle breaks
                 break;
             }
@@ -221,8 +267,26 @@ void startGame(int connection_fd)
             }
         }
 
+        //If the player touches the key, they win
+        if(player.getGlobalBounds().intersects(key.getGlobalBounds())){
+
+            //The program tells the server the user won
+            sprintf(buffer,"1");
+            sendString(connection_fd, buffer, BUFFER_SIZE);
+            //The victory screen is loaded
+            victoryScreen(window);
+            //The window closes
+            window.close();
+            break;
+        }
+
         //The window clears itself with a black background
         window.clear(sf::Color::Black);
+
+        //If the light touches the key, the key is drawn
+        if(light.getGlobalBounds().contains(key.getPosition())){
+            window.draw(key);
+        }
 
         //Draw the player
         window.draw(player);
@@ -234,6 +298,12 @@ void startGame(int connection_fd)
         window.display();
     }
 
+    bzero(buffer, BUFFER_SIZE);
+
+    //The program tells the server the client disconnected
+    sprintf(buffer,"-1");
+    sendString(connection_fd, buffer, BUFFER_SIZE);
+    
 }
 
 //Function for printing the death screen
@@ -298,6 +368,21 @@ void victoryScreen(sf::RenderWindow &window)
 
     sleep(5);
     
+}
+
+//Function for generating a random position to hide the key for winning the game
+sf::Vector2f generateRandomPosition(sf::RenderWindow &window)
+{
+    sf::Vector2f vector;
+
+    //The random is seeded
+    srand(time(NULL));
+    
+    //Random values for x and y are generated
+    vector.x = rand() % window.getSize().x + 1;
+    vector.y = rand() % window.getSize().y + 1;
+
+    return vector;
 }
 
 //Function that returns true if the player is moving

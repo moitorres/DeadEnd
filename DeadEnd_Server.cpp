@@ -119,6 +119,7 @@ void setupHandlers()
 */
 void waitForConnections(int server_fd)
 {
+    char buffer[BUFFER_SIZE];
     struct sockaddr_in client_address;
     socklen_t client_address_size;
     char client_presentation[INET_ADDRSTRLEN];
@@ -196,16 +197,9 @@ void * attentionThread(void * arg)
     test_fds[0].fd = connection_fd;
     test_fds[0].events = POLLIN;
 
-    //The information of the client is saved
-    struct sockaddr_in client_address;
-    socklen_t client_address_size;
-    char client_presentation[INET_ADDRSTRLEN];    
-
-    inet_ntop(client_address.sin_family, &client_address.sin_addr, client_presentation, sizeof client_presentation);
-
     //The server waits for the message that the client is about to begin the game
     recvString(connection_fd, buffer, BUFFER_SIZE);
-    printf("The client %s is about to begin the game\n",client_presentation);
+    printf("The client is about to begin the game\n");
 
     bzero(buffer, BUFFER_SIZE);
 
@@ -218,32 +212,54 @@ void * attentionThread(void * arg)
         //When the limit passes, the server sends a queue to the client
         sleep(limit);
 
+        bzero(buffer, BUFFER_SIZE);
+
+        //Check if the client send a message
+        poll_response = poll(test_fds,1,0);
+        if (poll_response == 1)
+        {
+
+            //The server receives the message indicating if the user lost
+            status = recvString(connection_fd, buffer, BUFFER_SIZE);
+
+            //If the user disconnected
+            if(strncmp(buffer,"-1", BUFFER_SIZE)==0){
+                printf("\nClient exited the game\n");
+                //The cycle finishes
+                break;  
+            }
+
+            //If the status is 0, it means the user lost
+            if(strncmp(buffer,"0", BUFFER_SIZE)==0)
+            {
+                printf("The client lost\n");
+                //The cycle finishes
+                break;
+            }
+
+            //If the status is 1, it means the user won
+            if(strncmp(buffer,"1", BUFFER_SIZE)==0)
+            {
+                printf("The client won\n");
+                //The cycle finishes
+                break;
+            }
+        }
+
         //A message is sent to the client indicating to play a sound
         sprintf(buffer, "1");
         sendString(connection_fd, buffer, BUFFER_SIZE);
-
-        bzero(buffer, BUFFER_SIZE);
-
-        //The server receives the message indicating if the user lost
-        status = recvString(connection_fd, buffer, BUFFER_SIZE);
-        //If the user disconnected
-        if(status==0){
-            printf("\nClient exited the game\n");
-            //The cycle finishes
-            break;  
-        }
-        //If the status is -1, it means the user lost
-        if(strncmp(buffer,"-1", BUFFER_SIZE)==0)
-        {
-            printf("The client lost\n");
-            //The cycle finishes
-            break;
-        }
-
-        bzero(buffer, BUFFER_SIZE);
-
+        
         //A new limit is created
         limit = rand() %15 + 8;
+    }
+
+    bzero(buffer, BUFFER_SIZE);
+    //The server tells the client it is about to disconnect
+    if(interrupt_exit){
+        printf("Telling the clients the server is closing down\n");
+        sprintf(buffer, "-1");
+        sendString(connection_fd, buffer, BUFFER_SIZE);
     }
 
     //The thread exits
