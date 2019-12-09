@@ -40,6 +40,7 @@ void startGame(int connection_fd);
 void startSCreen(sf::RenderWindow &window);
 void deathScreen(sf::RenderWindow &window);
 void victoryScreen(sf::RenderWindow &window);
+bool collides(sf::Sprite sprite, int x, int y);
 sf::Vector2f generateRandomPosition(sf::RenderWindow &window);
 bool playerMoves();
 /*void createMaze(Node nodeList[], sf::RenderWindow &window);
@@ -142,26 +143,34 @@ void startGame(int connection_fd)
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "Dead End");
 
     //The player is created
-    sf::CircleShape player(20.0f);
-    player.setPosition(sf::Vector2f(window.getSize()) / 2.f);
-    player.setFillColor(sf::Color(204,170,165,255));
+    sf::Texture texturePlayer;
+    //A texture for the player is loaded
+    if (!texturePlayer.loadFromFile("./images/player_sprite.png"))
+    {
+        printf("Error: loading texture\n");
+    }
+    texturePlayer.setSmooth(true);
+    sf::Sprite player;
+    player.setTexture(texturePlayer);
+    player.setPosition((sf::Vector2f(window.getSize()) / 2.f) - (sf::Vector2f(player.getGlobalBounds().height, player.getGlobalBounds().width)));
+    player.setScale(sf::Vector2f(0.3f, 0.3f));
 
     //The light that sorrounds the player is created
-    sf::CircleShape light(100.0f);
-    light.setPosition(player.getPosition().x - 80.0f, player.getPosition().y - 80.0f);
+    sf::CircleShape light(175.0f);
+    light.setPosition(player.getPosition().x - 110.0f, player.getPosition().y - 110.0f);
     light.setFillColor(sf::Color(255,221,0,40));
 
     //The item to win the game is generated
     //First, the texture is loaded
-    sf::Texture texture;
-    if (!texture.loadFromFile("./images/key.png"))
+    sf::Texture textureKey;
+    if (!textureKey.loadFromFile("./images/key.png"))
     {
         printf("Error: loading texture\n");
     }
-    texture.setSmooth(true);
+    textureKey.setSmooth(true);
     //Then the sprite is created and the texture is applied to it
     sf::Sprite key;
-    key.setTexture(texture);
+    key.setTexture(textureKey);
     //And it is scaled down
     key.setScale(sf::Vector2f(0.3f, 0.3f));
     //A random position for it is generated
@@ -266,7 +275,7 @@ void startGame(int connection_fd)
                 player.move(0.0f, 0.5f);
                 light.move(0.0f, 0.5f);
 
-                if((light.getPosition().y + light.getGlobalBounds().y) ==)
+                
             }
         }
 
@@ -447,7 +456,7 @@ void victoryScreen(sf::RenderWindow &window)
 bool collides(sf::Sprite sprite, int x, int y)
 {
     if(x>sprite.getPosition().x && x<sprite.getGlobalBounds().width && y>sprite.getPosition().y && y<sprite.getGlobalBounds().height)
-        return true
+        return true;
 
     else
         return false;
@@ -462,8 +471,8 @@ sf::Vector2f generateRandomPosition(sf::RenderWindow &window)
     srand(time(NULL));
     
     //Random values for x and y are generated
-    vector.x = rand() % (window.getSize().x - 20) + 20;
-    vector.y = rand() % (window.getSize().y - 20) + 20;
+    vector.x = rand() % (window.getSize().x - 50) + 50;
+    vector.y = rand() % (window.getSize().y - 50) + 50;
 
     return vector;
 }
