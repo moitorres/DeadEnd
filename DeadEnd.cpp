@@ -243,28 +243,30 @@ void startGame(int connection_fd)
         //If the sound isn't playing, they can move freely
         else{
             //If the player moves left
-            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
+            if( (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) && player.getPosition().x>0)
             {
                 player.move(-0.5f, 0.0f);
                 light.move(-0.5f, 0.0f);
             }
             //If the player moves right
-            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
+            if((sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) && (player.getPosition().x + player.getGlobalBounds().width)<window.getSize().x)
             {
                 player.move(0.5f, 0.0f);
                 light.move(0.5f, 0.0f);
             }
             //If the player moves up
-            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
+            if((sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) && player.getPosition().y>0)
             {
                 player.move(0.0f, -0.5f);
                 light.move(0.0f, -0.5f);
             }
             //If the player moves down
-            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
+            if((sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)) && (player.getPosition().y + player.getGlobalBounds().height)<window.getSize().y)
             {
                 player.move(0.0f, 0.5f);
                 light.move(0.0f, 0.5f);
+
+                if((light.getPosition().y + light.getGlobalBounds().y) ==)
             }
         }
 
@@ -441,6 +443,16 @@ void victoryScreen(sf::RenderWindow &window)
     
 }
 
+//Function that checks if an x and y coordinates collide with a sprite
+bool collides(sf::Sprite sprite, int x, int y)
+{
+    if(x>sprite.getPosition().x && x<sprite.getGlobalBounds().width && y>sprite.getPosition().y && y<sprite.getGlobalBounds().height)
+        return true
+
+    else
+        return false;
+}
+
 //Function for generating a random position to hide the key for winning the game
 sf::Vector2f generateRandomPosition(sf::RenderWindow &window)
 {
@@ -475,6 +487,7 @@ bool playerMoves(){
 
 /*
     The following two functions weren't used in the final version of the project
+    They were used to randomly generate a maze.
 */
 
 /*Function that creates a maze using the kruskall algorithm 
