@@ -251,7 +251,7 @@ void * attentionThread(void * arg)
         //A message is sent to the client indicating to play a sound
         sprintf(buffer, "1");
         sendString(connection_fd, buffer, BUFFER_SIZE);
-        
+
         //A new limit is created
         limit = rand() %15 + 8;
     }

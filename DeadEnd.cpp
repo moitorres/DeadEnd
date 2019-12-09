@@ -26,7 +26,6 @@
 // Custom libraries
 #include "sockets.h"
 #include "fatal_error.h"
-#include "mazeHelper.h"
 
 using namespace std;
 
@@ -121,26 +120,55 @@ void startGame(int connection_fd)
     int poll_response;
     int timeStart;
     double timeElapsed=0;
+    int random;
     bool soundPlaying = false;
-
-    //A sound buffer is created
-    sf::SoundBuffer breathing;
-    //A file is loaded into the buffer
-    if(!breathing.loadFromFile("./sounds/breathing.wav"))
-    {
-        printf("Error: loading sound\n");
-    }
-    //A sound is created and the buffer is loaded into it
-    sf::Sound sound;
-    sound.setBuffer(breathing);
 
     //Create a structure to hold the file descriptors to poll
     struct pollfd test_fds[1];
     test_fds[0].fd = connection_fd;
     test_fds[0].events = POLLIN;
 
+    /*
+        Load all the sounds
+    */
+
+    //A sound is created
+    sf::Sound sound;
+
+    //A sound buffer is created for the breathing sound
+    sf::SoundBuffer breathing;
+    //A file is loaded into the buffer
+    if(!breathing.loadFromFile("./sounds/breathing.wav"))
+    {
+        printf("Error: loading sound\n");
+    }
+
+    //A sound buffer is created for the running sound
+    sf::SoundBuffer running;
+    //A file is loaded into the buffer
+    if(!running.loadFromFile("./sounds/running.wav"))
+    {
+        printf("Error: loading sound\n");
+    }
+
+    //A sound buffer is created for the door sound
+    sf::SoundBuffer door;
+    //A file is loaded into the buffer
+    if(!door.loadFromFile("./sounds/door.wav"))
+    {
+        printf("Error: loading sound\n");
+    }
+
+    /*
+        Create the window
+    */
+
     //The window for the game is created
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "Dead End");
+
+    /*
+        Create all the sprites and objects
+    */
 
     //The player is created
     sf::Texture texturePlayer;
@@ -176,6 +204,10 @@ void startGame(int connection_fd)
     //A random position for it is generated
     key.setPosition(generateRandomPosition(window));
 
+    /*
+        Start the game
+    */
+
     //The start screen is printed
     startScreen(window);
 
@@ -209,8 +241,23 @@ void startGame(int connection_fd)
             {
                 //A timer starts
                 timeStart = clock();
+
                 //The sound starts playing
                 soundPlaying = true;
+
+                //A random between 1 and 3 is created
+                random = rand() % 3 + 1;
+
+                //If the random is 1, the running sound effect is played
+                if(random == 1)
+                    sound.setBuffer(running);
+                //If the random is 2, the door sound effect is played
+                else if(random == 2)
+                    sound.setBuffer(door);
+                //If the random is 3, the breathing sound effect is played
+                else
+                    sound.setBuffer(breathing);
+
                 sound.play();
             }
 
