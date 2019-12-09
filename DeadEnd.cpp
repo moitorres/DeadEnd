@@ -37,6 +37,7 @@ void usage(char * program);
 void onInterrupt(int signal);
 void setupHandlers();
 void startGame(int connection_fd);
+void startSCreen(sf::RenderWindow &window);
 void deathScreen(sf::RenderWindow &window);
 void victoryScreen(sf::RenderWindow &window);
 sf::Vector2f generateRandomPosition(sf::RenderWindow &window);
@@ -166,10 +167,13 @@ void startGame(int connection_fd)
     //A random position for it is generated
     key.setPosition(generateRandomPosition(window));
 
+    //The start screen is printed
+    startSCreen(window);
+
     //Send message to the server
     sprintf(buffer,"The game is about to begin\n");
     sendString(connection_fd, buffer, BUFFER_SIZE);
-
+ 
     bzero(buffer, BUFFER_SIZE);
 
     //While the window is opened
@@ -216,9 +220,6 @@ void startGame(int connection_fd)
         {
             //The boolean becomes false
             soundPlaying = false;
-            //The program tells the server the user survived
-            sprintf(buffer,"1");
-            sendString(connection_fd, buffer, BUFFER_SIZE);
         }
 
         //The program checks for how much time the sound has been playing
@@ -267,8 +268,13 @@ void startGame(int connection_fd)
             }
         }
 
+        //The window clears itself with a black background
+        window.clear(sf::Color::Black);
+
         //If the player touches the key, they win
-        if(player.getGlobalBounds().intersects(key.getGlobalBounds())){
+        if(player.getGlobalBounds().contains(key.getPosition()) || player.getGlobalBounds().intersects(key.getGlobalBounds())){
+
+            bzero(buffer, BUFFER_SIZE);
 
             //The program tells the server the user won
             sprintf(buffer,"1");
@@ -280,11 +286,8 @@ void startGame(int connection_fd)
             break;
         }
 
-        //The window clears itself with a black background
-        window.clear(sf::Color::Black);
-
         //If the light touches the key, the key is drawn
-        if(light.getGlobalBounds().contains(key.getPosition())){
+        if(!light.getGlobalBounds().contains(key.getPosition()) || !light.getGlobalBounds().intersects(key.getGlobalBounds())){
             window.draw(key);
         }
 
@@ -306,9 +309,67 @@ void startGame(int connection_fd)
     
 }
 
+//Function for printing the start screen
+void startSCreen(sf::RenderWindow &window)
+{
+    //Poll event for the window
+    sf::Event event;
+    while(window.pollEvent(event))
+    {
+        //If the user clicks the close button, the windows closes
+        if (event.type == sf::Event::Closed)
+            window.close();
+    }
+
+    //The font for the deathscreen is loaded
+    sf::Font font;
+    if (!font.loadFromFile("./fonts/8bitOperatorPlus8-Regular.ttf"))
+    {
+        printf("Error: loading font\n");
+    }
+
+    //A text for the tilte is created and the font is applied to it
+    sf::Text title;
+    title.setFont(font);
+    //the string "Dead End" is added to the text
+    title.setString("Dead End");
+    //The size of the text is set
+    title.setCharacterSize(200);
+    // set the color
+    title.setFillColor(sf::Color::White);
+
+    //A text for the instructions is created and the font is applied to it
+    sf::Text instructions;
+    instructions.setFont(font);
+    instructions.setString("If you hear any sound, don't move.\nFind the key to escape.");
+    //The size of the text is set
+    instructions.setCharacterSize(100);
+    // set the color
+    instructions.setFillColor(sf::Color::White);
+    instructions.setPosition(title.getPosition().x, title.getPosition().y + 250);
+
+    //The text is printed for five seconds and then, the game starts
+    window.clear(sf::Color::Black);
+    window.draw(title);
+    window.draw(instructions);
+    window.display();
+
+    sleep(4.5);
+    
+}
+
 //Function for printing the death screen
 void deathScreen(sf::RenderWindow &window)
 {
+    //Poll event for the window
+    sf::Event event;
+    while(window.pollEvent(event))
+    {
+        //If the user clicks the close button, the windows closes
+        if (event.type == sf::Event::Closed)
+            window.close();
+    }
+
     //The font for the deathscreen is loaded
     sf::Font font;
     if (!font.loadFromFile("./fonts/8bitOperatorPlus8-Regular.ttf"))
@@ -341,6 +402,16 @@ void deathScreen(sf::RenderWindow &window)
 //Function for printing the victory screen
 void victoryScreen(sf::RenderWindow &window)
 {
+
+    //Poll event for the window
+    sf::Event event;
+    while(window.pollEvent(event))
+    {
+        //If the user clicks the close button, the windows closes
+        if (event.type == sf::Event::Closed)
+            window.close();
+    }
+
     //The font for the deathscreen is loaded
     sf::Font font;
     if (!font.loadFromFile("./fonts/8bitOperatorPlus8-Regular.ttf"))
@@ -352,7 +423,7 @@ void victoryScreen(sf::RenderWindow &window)
     sf::Text text;
     text.setFont(font);
 
-    //the string "game over" is added to the text
+    //the string "You Won!" is added to the text
     text.setString("You Won!");
 
     //The size of the text is set
@@ -379,8 +450,8 @@ sf::Vector2f generateRandomPosition(sf::RenderWindow &window)
     srand(time(NULL));
     
     //Random values for x and y are generated
-    vector.x = rand() % window.getSize().x + 1;
-    vector.y = rand() % window.getSize().y + 1;
+    vector.x = rand() % (window.getSize().x - 20) + 20;
+    vector.y = rand() % (window.getSize().y - 20) + 20;
 
     return vector;
 }
