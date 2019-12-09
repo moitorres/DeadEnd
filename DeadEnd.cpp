@@ -529,8 +529,8 @@ sf::Vector2f generateRandomPosition(sf::RenderWindow &window)
     srand(time(NULL));
     
     //Random values for x and y are generated
-    vector.x = rand() % (window.getSize().x - 50) + 50;
-    vector.y = rand() % (window.getSize().y - 50) + 50;
+    vector.x = rand() % (window.getSize().x - 100) + 100;
+    vector.y = rand() % (window.getSize().y - 100) + 100;
 
     return vector;
 }
