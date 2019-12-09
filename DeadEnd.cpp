@@ -40,7 +40,7 @@ void startGame(int connection_fd);
 void startSCreen(sf::RenderWindow &window);
 void deathScreen(sf::RenderWindow &window);
 void victoryScreen(sf::RenderWindow &window);
-bool collides(sf::Sprite sprite, int x, int y);
+bool collides(sf::Sprite sprite, sf::CircleShape circle);
 sf::Vector2f generateRandomPosition(sf::RenderWindow &window);
 bool playerMoves();
 /*void createMaze(Node nodeList[], sf::RenderWindow &window);
@@ -152,12 +152,12 @@ void startGame(int connection_fd)
     texturePlayer.setSmooth(true);
     sf::Sprite player;
     player.setTexture(texturePlayer);
-    player.setPosition((sf::Vector2f(window.getSize()) / 2.f) - (sf::Vector2f(player.getGlobalBounds().height, player.getGlobalBounds().width)));
+    player.setPosition(sf::Vector2f(window.getSize().x / 2.f -70, window.getSize().y /2.f - 90));
     player.setScale(sf::Vector2f(0.3f, 0.3f));
 
     //The light that sorrounds the player is created
-    sf::CircleShape light(175.0f);
-    light.setPosition(player.getPosition().x - 110.0f, player.getPosition().y - 110.0f);
+    sf::CircleShape light(150.0f);
+    light.setPosition(player.getPosition().x - 90.0f, player.getPosition().y - 80.0f);
     light.setFillColor(sf::Color(255,221,0,40));
 
     //The item to win the game is generated
@@ -298,7 +298,7 @@ void startGame(int connection_fd)
         }
 
         //If the light touches the key, the key is drawn
-        if(!light.getGlobalBounds().contains(key.getPosition()) || !light.getGlobalBounds().intersects(key.getGlobalBounds())){
+        if(light.getGlobalBounds().intersects(key.getGlobalBounds()) || collides(key,light)){
             window.draw(key);
         }
 
@@ -406,7 +406,7 @@ void deathScreen(sf::RenderWindow &window)
     window.draw(text);
     window.display();
 
-    sleep(5);
+    sleep(4.5);
     
 }
 
@@ -448,16 +448,24 @@ void victoryScreen(sf::RenderWindow &window)
     window.draw(text);
     window.display();
 
-    sleep(5);
+    sleep(4.5);
     
 }
 
-//Function that checks if an x and y coordinates collide with a sprite
-bool collides(sf::Sprite sprite, int x, int y)
+//Function that checks if a circle shape collides with a sprite
+bool collides(sf::Sprite sprite, sf::CircleShape circle)
 {
+    int x = circle.getPosition().x;
+    int y = circle.getPosition().y;
+    int finalX = x + circle.getGlobalBounds().width;
+    int finalY = y + circle.getGlobalBounds().height;
+
+    //Check if the upper left side of the circle collide with any part of the sprite
     if(x>sprite.getPosition().x && x<sprite.getGlobalBounds().width && y>sprite.getPosition().y && y<sprite.getGlobalBounds().height)
         return true;
-
+    //Check if the down right side of the circle collide with any part of the sprite
+    else if(finalX>sprite.getPosition().x && finalX<sprite.getGlobalBounds().width && finalY>sprite.getPosition().y && finalY<sprite.getGlobalBounds().height)
+        return true;
     else
         return false;
 }
