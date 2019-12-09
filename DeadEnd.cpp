@@ -81,10 +81,14 @@ void usage(char * program)
 void startGame(int connection_fd)
 {
     char buffer[BUFFER_SIZE];
+    //Status for the messages from the server
     int status;
     //Counter and limit for the sound queues
     int counter, limit=3;
     int poll_response;
+    int timeStart;
+    double timeElapsed=0;
+    bool soundPlaying = false;
 
     //A sound buffer is created
     sf::SoundBuffer footsteps;
@@ -139,13 +143,17 @@ void startGame(int connection_fd)
         //If the server send a message, it means the client must play a sound
         if (poll_response == 1)
         {
+            printf("Message recived from the server\n");
             //Receive the sound to play
             recvString(connection_fd,buffer,BUFFER_SIZE);
             
-
             //IF the code is 1, the sound is played
             if (strncmp(buffer,"1", BUFFER_SIZE)==0)
             {
+                //A timer starts
+                timeStart = clock();
+                //The sound starts playing
+                soundPlaying = true;
                 sound.play();
             }
             
@@ -154,14 +162,26 @@ void startGame(int connection_fd)
         else if(poll_response == -1)
         {
             printf("\nServer exit\n");
+            break;
         }
 
         bzero(buffer, BUFFER_SIZE);
 
-        //Movement of the player
+        //If the sound has stopped playing
+        if(soundPlaying && sound.getStatus() == sf::SoundSource::Status::Stopped)
+        {
+            //The boolean becomes false
+            soundPlaying = false;
+            //The program tells the server the user survived
+            sprintf(buffer,"1");
+            sendString(connection_fd, buffer, BUFFER_SIZE);
+        }
+
+        //The program checks for how much time the sound has been playing
+        timeElapsed = (clock()-timeStart)/(double)(CLOCKS_PER_SEC);
 
         //If the player moves while the sound is playing, they die
-        if(sound.getStatus() == sf::SoundSource::Status::Playing){
+        if(soundPlaying && timeElapsed>1 && timeElapsed<5){
             if(playerMoves())
             {
                 //The program tells the server the user died
@@ -293,13 +313,13 @@ void deathScreen(sf::RenderWindow &window)
     // set the color
     text.setFillColor(sf::Color::Red);
 
-    //The text is printed for fifty cycles and then, the game finishes
-    for(int i=0;i<500;i++)
-    {
-        window.clear(sf::Color::Black);
-        window.draw(text);
-        window.display();
-    }
+    //The text is printed for ten seconds and then, the game finishes
+    window.clear(sf::Color::Black);
+    window.draw(text);
+    window.display();
+
+    sleep(10);
+    
 }
 
 bool playerMoves(){

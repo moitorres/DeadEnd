@@ -178,7 +178,7 @@ void waitForConnections(int server_fd)
 void * attentionThread(void * arg)
 {
     char buffer[BUFFER_SIZE];
-    int status;
+    int status, poll_response;
     //Counter and limit for the generation of random events(sounds)
     int counter, limit;
 
@@ -190,6 +190,11 @@ void * attentionThread(void * arg)
 
     //The connection_fd is saved
     int connection_fd = connection_data->connection_fd;
+
+    //Create a structure to hold the file descriptors to poll
+    struct pollfd test_fds[1];
+    test_fds[0].fd = connection_fd;
+    test_fds[0].events = POLLIN;
 
     //The information of the client is saved
     struct sockaddr_in client_address;
@@ -204,43 +209,41 @@ void * attentionThread(void * arg)
 
     bzero(buffer, BUFFER_SIZE);
 
-    //A random limit between 750 and 1000 is generated
-    limit = rand() %15000 + 10000;
+    //A random limit between 8 and 15 seconds is generated
+    limit = rand() %15 + 8;
 
     //Loop that continues while the game is opened 
     while(!interrupt_exit){
+        
+        //When the limit passes, the server sends a queue to the client
+        sleep(limit);
 
-        //The counter increases
-        counter+=1;
+        //A message is sent to the client indicating to play a sound
+        sprintf(buffer, "1");
+        sendString(connection_fd, buffer, BUFFER_SIZE);
 
-        //If the counter reaches the limit
-        if(counter>=limit)
+        bzero(buffer, BUFFER_SIZE);
+
+        //The server receives the message indicating if the user lost
+        status = recvString(connection_fd, buffer, BUFFER_SIZE);
+        //If the user disconnected
+        if(status==0){
+            printf("\nClient exited the game\n");
+            //The cycle finishes
+            break;  
+        }
+        //If the status is -1, it means the user lost
+        if(strncmp(buffer,"-1", BUFFER_SIZE)==0)
         {
-            //A message is sent to the client indicating to play a sound
-            sprintf(buffer, "1");
-            sendString(connection_fd, buffer, BUFFER_SIZE);
-
-            bzero(buffer, BUFFER_SIZE);
-
-            //The server receives the message indicating if the user lost
-            recvString(connection_fd, buffer, BUFFER_SIZE);
-
-            //If the status is -1, it means the user lost
-            if(strncmp(buffer,"-1", BUFFER_SIZE)==0)
-            {
-                printf("The client lost\n");
-
-                //The cycle finishes
-                break;
-            }
-
-            bzero(buffer, BUFFER_SIZE);
-
-            //The counter is resetted and a new limit is created
-            counter = 0;
-            limit = rand() %15000 + 10000;
+            printf("The client lost\n");
+            //The cycle finishes
+            break;
         }
 
+        bzero(buffer, BUFFER_SIZE);
+
+        //A new limit is created
+        limit = rand() %15 + 8;
     }
 
     //The thread exits
