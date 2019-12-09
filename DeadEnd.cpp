@@ -35,10 +35,11 @@ using namespace std;
 ///// FUNCTION DECLARATIONS
 void usage(char * program);
 void startGame(int connection_fd);
-void createMaze(Node nodeList[], sf::RenderWindow &window);
 void deathScreen(sf::RenderWindow &window);
+void victoryScreen(sf::RenderWindow &window);
 bool playerMoves();
-void mergeGroup(Node nodeList[], int group1, int group2);
+/*void createMaze(Node nodeList[], sf::RenderWindow &window);
+void mergeGroup(Node nodeList[], int group1, int group2);*/
 
 ///// MAIN FUNCTION
 int main(int argc, char * argv[])
@@ -106,19 +107,18 @@ void startGame(int connection_fd)
     test_fds[0].fd = connection_fd;
     test_fds[0].events = POLLIN;
 
-    //A list for the nodes in the maze is created, according to the width and height defined
-    Node nodeList[GRID_WIDTH * GRID_HEIGHT];
-
     //The window for the game is created
-    sf::RenderWindow window(sf::VideoMode(GRID_WIDTH * NODE_SIZE, GRID_HEIGHT * NODE_SIZE), "Dead End");
+    sf::RenderWindow window(sf::VideoMode(1920, 1080), "Dead End");
 
     //The player is created
-    sf::RectangleShape player(sf::Vector2f(15.0f, 15.0f));
-    player.setPosition(10.0f,10.0f);
-    player.setFillColor(sf::Color::Red);
+    sf::CircleShape player(20.0f);
+    player.setPosition(sf::Vector2f(window.getSize()) / 2.f);
+    player.setFillColor(sf::Color(204,170,165,255));
 
-    //The maze is created
-    createMaze(nodeList, window);
+    //The light that sorrounds the player is created
+    sf::CircleShape light(60.0f);
+    light.setPosition(player.getPosition().x - 40.0f, player.getPosition().y - 40.0f);
+    light.setFillColor(sf::Color(255,221,0,40));
 
     //Send message to the server
     sprintf(buffer,"The game is about to begin\n");
@@ -198,33 +198,37 @@ void startGame(int connection_fd)
             //If the player moves left
             if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
             {
-                player.move(-1.3f, 0.0f);
+                player.move(-0.5f, 0.0f);
+                light.move(-0.5f, 0.0f);
             }
             //If the player moves right
             if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
             {
-                player.move(1.3f, 0.0f);
+                player.move(0.5f, 0.0f);
+                light.move(0.5f, 0.0f);
             }
             //If the player moves up
             if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
             {
-                player.move(0.0f, -1.3f);
+                player.move(0.0f, -0.5f);
+                light.move(0.0f, -0.5f);
             }
             //If the player moves down
             if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
             {
-                player.move(0.0f, 1.3f);
+                player.move(0.0f, 0.5f);
+                light.move(0.0f, 0.5f);
             }
         }
 
         //The window clears itself with a black background
         window.clear(sf::Color::Black);
 
-        //Draw the maze 
-        drawMaze(window, nodeList);
-
         //Draw the player
         window.draw(player);
+
+        //Draw the light
+        window.draw(light);
 
         // Display the new buffer
         window.display();
@@ -232,7 +236,92 @@ void startGame(int connection_fd)
 
 }
 
-//Function that creates a maze using the kruskall algorithm 
+//Function for printing the death screen
+void deathScreen(sf::RenderWindow &window)
+{
+    //The font for the deathscreen is loaded
+    sf::Font font;
+    if (!font.loadFromFile("./fonts/8bitOperatorPlus8-Regular.ttf"))
+    {
+        printf("Error: loading font\n");
+    }
+
+    //A text is created and the font is applied to it
+    sf::Text text;
+    text.setFont(font);
+
+    //the string "game over" is added to the text
+    text.setString("Game Over");
+
+    //The size of the text is set
+    text.setCharacterSize(200);
+
+    // set the color
+    text.setFillColor(sf::Color::Red);
+
+    //The text is printed for five seconds and then, the game finishes
+    window.clear(sf::Color::Black);
+    window.draw(text);
+    window.display();
+
+    sleep(5);
+    
+}
+
+//Function for printing the victory screen
+void victoryScreen(sf::RenderWindow &window)
+{
+    //The font for the deathscreen is loaded
+    sf::Font font;
+    if (!font.loadFromFile("./fonts/8bitOperatorPlus8-Regular.ttf"))
+    {
+        printf("Error: loading font\n");
+    }
+
+    //A text is created and the font is applied to it
+    sf::Text text;
+    text.setFont(font);
+
+    //the string "game over" is added to the text
+    text.setString("You Won!");
+
+    //The size of the text is set
+    text.setCharacterSize(200);
+
+    // set the color
+    text.setFillColor(sf::Color::Green);
+
+    //The text is printed for five seconds and then, the game finishes
+    window.clear(sf::Color::Black);
+    window.draw(text);
+    window.display();
+
+    sleep(5);
+    
+}
+
+//Function that returns true if the player is moving
+bool playerMoves(){
+
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)
+    || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)
+    || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)
+    || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+    
+}
+
+/*
+    The following two functions weren't used in the final version of the project
+*/
+
+/*Function that creates a maze using the kruskall algorithm 
 void createMaze(Node nodeList[], sf::RenderWindow &window)
 {
     //The random is seeded
@@ -290,53 +379,6 @@ void createMaze(Node nodeList[], sf::RenderWindow &window)
     }
 }
 
-//Function for printing the death screen
-void deathScreen(sf::RenderWindow &window)
-{
-    //The font for the deathscreen is loaded
-    sf::Font font;
-    if (!font.loadFromFile("./fonts/8bitOperatorPlus8-Regular.ttf"))
-    {
-        printf("Error: loading font\n");
-    }
-
-    //A text is created and the font is applied to it
-    sf::Text text;
-    text.setFont(font);
-
-    //the string "game over" is added to the text
-    text.setString("Game Over");
-
-    //The size of the text is set
-    text.setCharacterSize(200);
-
-    // set the color
-    text.setFillColor(sf::Color::Red);
-
-    //The text is printed for ten seconds and then, the game finishes
-    window.clear(sf::Color::Black);
-    window.draw(text);
-    window.display();
-
-    sleep(10);
-    
-}
-
-bool playerMoves(){
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)
-        || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)
-        || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)
-        || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
-        {
-            return true;
-        }
-    else
-    {
-        return false;
-    }
-    
-}
-
 //Function for merging two groups of nodes
 void mergeGroup(Node nodeList[], int group1, int group2)
 {
@@ -345,4 +387,4 @@ void mergeGroup(Node nodeList[], int group1, int group2)
         if (nodeList[i].group == group2)
             nodeList[i].group = group1;
     }
-}
+}*/
